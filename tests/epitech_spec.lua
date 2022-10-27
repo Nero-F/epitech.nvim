@@ -1,0 +1,5 @@
+describe("epitech", function()
+  it("require", function()
+    require("epitech")
+  end)
+end)
