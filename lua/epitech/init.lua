@@ -1,22 +1,7 @@
-local M = {}
-
-M.getAcademicYear = function ()
+local getAcademicYear = function ()
   return 2022
 end
 
-local appendPreProcDirectives = function(ft)
-  local rhs_ext = ft == "hpp" and "_HPP_" or "_H_"
-  local filename = string.upper(vim.fn.expand("%:t:r") .. rhs_ext)
-
-  local cppDirectives = {
-    "#ifndef " .. filename,
-    "#define " .. filename,
-    "",
-    "#endif /* " .. filename .. " */",
-  }
-
-  vim.fn.append(vim.fn.line('.'), cppDirectives)
-end
 
 HEADERMAP = {
   c = { b = '/*', m= '**', e= '*/' },
@@ -44,24 +29,48 @@ local getProjectName = function()
     return nil
   end
   return ' ' .. string.sub(cwd, i+1, j)
-
 end
 
 local putHeader = function(targetedHeader, fileDesc, projName)
   local header = {
     targetedHeader.b,
-    targetedHeader.m .. " EPITECH PROJECT, " .. M.getAcademicYear(), -- TODO: this need to done 
+    targetedHeader.m .. " EPITECH PROJECT, " .. getAcademicYear(), -- TODO: this need to done 
     targetedHeader.m .. projName,
     targetedHeader.m .. " File description:" ,
     targetedHeader.m .. " " .. fileDesc,
-    targetedHeader.e
+    targetedHeader.e,
   }
 
   vim.fn.append(0, header)
 end
 
--- user input logic
-local askUserInputAndPutHeader = function(targetedHeader, callback)
+local appendPreProcDirectives = function(ft)
+  local rhs_ext = ft == "hpp" and "_HPP_" or "_H_"
+  local filename = string.upper(vim.fn.expand("%:t:r") .. rhs_ext)
+
+  local cppDirectives = { 
+    define = {
+      "#ifndef " .. filename,
+      "#define " .. filename,
+      "",
+      "#endif /* " .. filename .. " */",
+    },
+    pragma = {
+      "#pragma once"
+    }
+  }
+  if ft == "h" then
+    vim.fn.append(vim.fn.line('.'), cppDirectives.define)
+  else 
+    vim.ui.select({"define", "pragma"}, { }, function(choice)
+      vim.fn.append(vim.fn.line('.'), cppDirectives[choice])
+    end)
+  end
+end
+
+-- user input logic | TODO: handle escape sequence
+
+local askUserInputAndPutHeader = function(targetedHeader, ft)
   local projNameTmp = getProjectName()
   local defaultString = "" 
 
@@ -81,17 +90,17 @@ local askUserInputAndPutHeader = function(targetedHeader, callback)
     vim.ui.input("Description" .. defaultString, function(fileDesc)
       if fileDesc == nil then
         fileDesc = fileDescTmp
-      else
-        fileDesc = ' ' .. fileDescTmp
       end
       putHeader(targetedHeader, fileDesc, projName)
+      if ft == 'h' or ft == "hpp" then
+	appendPreProcDirectives(ft)
+      end
     end)
   end)
 end
 
-
-M.EpiHeader = function()
-  local ft = vim.bo.filetype;
+EpiHeader = function(opts)
+  local ft = vim.fn.expand("%:e")
   local targetedHeader = HEADERMAP[ft]
 
   if targetedHeader == nil then
@@ -99,13 +108,10 @@ M.EpiHeader = function()
     return nil
   end
 
-  if ft == 'h' and ft == "hpp" then
-    appendPreProcDirectives(ft)
-  end
-  askUserInputAndPutHeader(targetedHeader) -- In this order cuz input are non-blocking
+  askUserInputAndPutHeader(targetedHeader, ft) -- In this order cuz input are non-blocking
 end
 
-vim.keymap.set('n', '<leader>h', M.EpiHeader, { noremap=true, silent=false })
 
-M.EpiHeader()
+vim.api.nvim_create_user_command("EpiHeader", EpiHeader, { nargs = 0 })
 
+vim.keymap.set('n', '<leader>h', EpiHeader, { noremap=true, silent=false })
