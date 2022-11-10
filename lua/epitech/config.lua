@@ -2,6 +2,19 @@ local config = {}
 local userConfig = {}
 
 local defaultConfig = {
+  coding_style = {
+    keymaps = {
+      quit = { rhs = '<cmd>lua require"epitech.coding_style".quit()<cr>', action = 'quit' },
+    },
+    keybindings = {
+      quit = 'q',
+    },
+    title = "EpiCodingStyle",
+    separator = "━",
+    delivery_dir =  "/home/nero_f/delivery/EPITECH/TEK1/CPE_antman_2022", --vim.fn.expand("$PWD"),
+    reports_dir = vim.fn.simplify(vim.fn.expand("$PWD")), -- simplify is not really usefull here
+    export_file = "coding-style-reports.log",
+  },
   header = {
     headermap = {
       c = { b = '/*', m= '**', e= '*/' },
@@ -69,6 +82,7 @@ function config.set_defaults(userDefaults)
   else
     userConfig = merge_table(defaultConfig, userDefaults)
   end
+  require_and_configure("coding_style")
   require_and_configure("header")
 end
 
