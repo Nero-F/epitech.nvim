@@ -1,6 +1,6 @@
 local api = vim.api
 local config = nil
-local EpiDisplay = {}
+local EpiCodingStyle = {}
 
 local sets = {
   'setlocal buftype=nofile bufhidden=wipe nobuflisted nolist noswapfile nowrap nospell nonumber norelativenumber nofoldenable signcolumn=no',
@@ -11,7 +11,7 @@ local keymaps = {
   quit = { rhs = '<cmd>lua require"packer.display".quit()<cr>', action = 'quit' },
 }
 
-EpiDisplay.cfg = function(_config)
+EpiCodingStyle.cfg = function(_config)
   config = require("epitech.utils").cfg(_config)
 end
 
@@ -56,7 +56,7 @@ local function dump_style(exportFile)
     pty = true,
     stdout_buffered = true,
     on_stdout = function (_, d)
-      EpiDisplay.open(d[1])
+      EpiCodingStyle.open(d[1])
     end
   })
 end
@@ -94,12 +94,12 @@ local function setup_window(disp)
   end
 end
 
-function EpiDisplay.open(content)
+function EpiCodingStyle.open(content)
   local disp = setmetatable({}, EpiDisplayMetatable)
   vim.cmd("35vnew")
 
-  disp.win = vim.api.nvim_get_current_win();
-  disp.buf = vim.api.nvim_get_current_buf();
+  disp.win = api.nvim_get_current_win();
+  disp.buf = api.nvim_get_current_buf();
 
   disp.namespace = api.nvim_create_namespace("");
   setup_window(disp)
@@ -108,15 +108,14 @@ function EpiDisplay.open(content)
   -- api.nvim_buf_set_lines(disp.buf, 4, 4, false, {"mes couilles"})
 end
 
-EpiDisplay.quit = function ()
-  EpiDisplay.status.running = false
+EpiCodingStyle.quit = function ()
+  EpiCodingStyle.status.running = false
   vim.fn.execute("q!", "silent")
 end
 
 local function parse_line_for_qflist(line)
-  -- l = {{module = "gar.c", lnum = 1, col = 1, text = "la desc"}}
   local x, y = string.find(line, "%:%d+%:")
-  local lineNbr = string.sub(line, x+1, y-1)
+  local lineNbr = vim.fn.str2nr(string.sub(line, x+1, y-1), 10)
   x, y = string.find(line, "^[a-zA-Z0-9%_%-%.%/]+%:")
   local filename = string.sub(line, x, y-1)
   x, y = string.find(line, "%:%u+.+$")
@@ -147,30 +146,59 @@ local function parse_report_file()
 end
 
 local function populate_quickfix_list(report)
-  print('mes couilles')
-  -- vim.fn.setqflist({"lua/epitech/init.lua|49 col 7| local getProjectName = function()"}, "r")
-  local efe = vim.fn.getqflist()
-  local aa = vim.json.encode(efe)
-  P(aa)
-  vim.fn.writefile({aa}, "foo.txt", 'b')
-  vim.fn.setqflist(report.major, "r" )
-  -- vim.fn.setqflist({}, 'r', {title="foo", entries={
-  --   "lua/epitech/init.lua|49 col 7| local getProjectName = function()"
-  -- }})
+  if vim.fn.setqflist({}, "r", {items = report.minor}) == -1 then
+    print("Failure cannot populate quickfix list")
+    return nil
+  end
+    print("Quickfix list now full")
+  vim.fn.execute("copen")
 end
 
+local function set_coding_style_extmark()
+  local qfl = vim.fn.getqflist()
+  local ns = api.nvim_create_namespace("EpiCodingStyle.extmark")
+
+  for _, item in ipairs(qfl) do
+    vim.fn.bufload(item.bufnr)
+    api.nvim_buf_set_extmark(item.bufnr, ns, item.lnum-1, 0, {
+      virt_text = { {item.text, "QuickFixLine" } },
+    })
+  end
+end
+
+local function remove_export_file(filename)
+  if vim.fn.filereadable(filename) == 1 then
+    vim.fn.execute("!rm -f ".. filename)
+  end
+end
+
+api.nvim_create_user_command("EpiCodingStyleOff", function()
+  local ns = api.nvim_get_namespaces()["EpiCodingStyle.extmark"]
+  local qfl = vim.fn.getqflist()
+
+  for _, value in ipairs(qfl) do
+    api.nvim_buf_clear_namespace(value.bufnr, ns, 0, -1)
+  end
+end, {})
+
 api.nvim_create_user_command("EpiCodingStyle", function(_)
---  print("Running Coding Style checker...")
+  local absoluteExportFilePath = vim.fn.expand("$PWD/"..config.export_file)
   local spawnChecker = {
     "docker", "run", "--rm", "-i",
     "-v", config.delivery_dir .. ":/mnt/delivery",
     "-v", config.reports_dir .. ":/mnt/reports",
     "ghcr.io/epitech/coding-style-checker:latest", "/mnt/delivery", "/mnt/reports",
   }
+
+  remove_export_file(absoluteExportFilePath)
+  print("Running Coding Style checker...")
   local ret = vim.fn.jobstart(spawnChecker, {
     on_exit = function ()
       local report = parse_report_file();
-      populate_quickfix_list(report)
+      if report == nil or populate_quickfix_list(report) == nil then
+      	return
+      end
+      set_coding_style_extmark()
       -- dump_style(config.reports_dir .. "/" .. config.export_file, report)
     end
   })
@@ -181,4 +209,4 @@ api.nvim_create_user_command("EpiCodingStyle", function(_)
 end,
 {})
 
-return EpiDisplay
+return EpiCodingStyle
