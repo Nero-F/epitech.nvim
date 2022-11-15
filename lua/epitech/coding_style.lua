@@ -7,10 +7,10 @@ local sets = {
   'syntax clear',
 }
 
-local keymaps = {
-  quit = { rhs = '<cmd>lua require"packer.display".quit()<cr>', action = 'quit' },
-}
-
+-- local keymaps = {
+--   quit = { rhs = '<cmd>lua require"packer.display".quit()<cr>', action = 'quit' },
+-- }
+--
 EpiCodingStyle.cfg = function(_config)
   config = require("epitech.utils").cfg(_config)
 end
@@ -41,7 +41,7 @@ local EpiDisplayMetatable = {
   end,
 }
 
-EpiDisplayMetatable.__index = EpiDisplayMetatable 
+EpiDisplayMetatable.__index = EpiDisplayMetatable
 
 local function dump_style(exportFile)
   local grep_severity = {
@@ -71,24 +71,36 @@ local function make_header(buf)
   })
 end
 
-local function make_content(buf, content)
+-- TODO: Make these two next functions modular + highlits handling for maj min and infos
+local function make_content(disp, content)
   local parsed = vim.fn.split(content, ",")
   local i = 1
 
   for word in string.gmatch(content, '([^,]+)') do
-    vim.fn.appendbufline(buf, i + 1,word)
+    vim.fn.appendbufline(disp.buf, i + 1,word)
+    if i == 1 then
+      api.nvim_buf_add_highlight(disp.buf, disp.ns, "FloatBorder", i+1, 0, -1)
+    else
+      api.nvim_buf_add_highlight(disp.buf, disp.ns, "ColorColumn", i+1, 0, -1)
+    end
     i = i + 1
   end
+end
+
+local function make_help(disp)
+    vim.fn.appendbufline(disp.buf, 6,{"", "Press 'q' to quit"})
+    api.nvim_buf_add_highlight(disp.buf, disp.ns, "Statement", 7, 6, 9)
 end
 
 local function setup_window(disp)
   api.nvim_buf_set_option(disp.buf, 'filetype', 'EpiWindow')
   api.nvim_buf_set_name(disp.buf, '[EpiWindow]')
-  for _, m in pairs(keymaps) do
-    if m.lhs then
-      api.nvim_buf_set_keymap(disp.buf, 'n', m.lhs, m.rhs, { nowait = true, silent = true })
-    end
-  end
+  api.nvim_buf_set_keymap(disp.buf, "n", "q", ":quit<cr>", { noremap = true, silent = true })
+  -- for _, m in pairs(keymaps) do
+  --   if m.lhs then
+  --     api.nvim_buf_set_keymap(disp.buf, 'n', m.lhs, m.rhs, { nowait = true, silent = true })
+  --   end
+  -- end
   for _, c in ipairs(sets) do
     vim.cmd(c)
   end
@@ -101,16 +113,11 @@ function EpiCodingStyle.open(content)
   disp.win = api.nvim_get_current_win();
   disp.buf = api.nvim_get_current_buf();
 
-  disp.namespace = api.nvim_create_namespace("");
+  disp.ns = api.nvim_create_namespace("EpiCodingStyle.status");
   setup_window(disp)
   make_header(disp.buf)
-  make_content(disp.buf, content)
-  -- api.nvim_buf_set_lines(disp.buf, 4, 4, false, {"mes couilles"})
-end
-
-EpiCodingStyle.quit = function ()
-  EpiCodingStyle.status.running = false
-  vim.fn.execute("q!", "silent")
+  make_content(disp, content)
+  make_help(disp)
 end
 
 local function parse_line_for_qflist(line)
@@ -152,6 +159,7 @@ local function populate_quickfix_list(report)
   end
     print("Quickfix list now full")
   vim.fn.execute("copen")
+  return 1
 end
 
 local function set_coding_style_extmark()
@@ -161,7 +169,7 @@ local function set_coding_style_extmark()
   for _, item in ipairs(qfl) do
     vim.fn.bufload(item.bufnr)
     api.nvim_buf_set_extmark(item.bufnr, ns, item.lnum-1, 0, {
-      virt_text = { {item.text, "QuickFixLine" } },
+      virt_text = { {"★ " .. item.text, "DiagnosticError" } },
     })
   end
 end
@@ -199,13 +207,23 @@ api.nvim_create_user_command("EpiCodingStyle", function(_)
       	return
       end
       set_coding_style_extmark()
-      -- dump_style(config.reports_dir .. "/" .. config.export_file, report)
     end
   })
 
   if ret == -1 then
     print("Error while trying checking coding style.")
   end
+end,
+{})
+
+api.nvim_create_user_command("EpiCodingStyleStatus", function()
+  local absoluteExportFilePath = vim.fn.expand("$PWD/"..config.export_file)
+
+  if vim.fn.filereadable(absoluteExportFilePath) == false then
+    print("You need to execute EpiCodingStyle function first...")
+    return
+  end
+  dump_style(absoluteExportFilePath)
 end,
 {})
 
