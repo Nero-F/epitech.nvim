@@ -240,7 +240,7 @@ api.nvim_create_user_command("EpiCodingStyle", function(opts)
       if report == nil or populate_quickfix_list(report, opts.args) == nil then
       	return
       end
-      -- set_coding_style_extmark()
+      set_coding_style_extmark()
     end
   })
 
