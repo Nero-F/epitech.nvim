@@ -152,12 +152,26 @@ local function parse_report_file()
   return report
 end
 
-local function populate_quickfix_list(report)
-  if vim.fn.setqflist({}, "r", {items = report.minor}) == -1 then
-    print("Failure cannot populate quickfix list")
-    return nil
+local function populate_quickfix_list(report, target)
+  vim.fn.setqflist({}, "r")
+  if target == "" then
+    for key, value in pairs(report) do
+      if vim.fn.setqflist({}, "a", {items = value}) == -1 then
+	print("Failure cannot populate quickfix list")
+	return nil
+      end
+    end
+  else
+    if #report[target] == 0 then
+      print(string.format("%s target is empty...", target))
+      return nil
+    end
+    if vim.fn.setqflist({}, "r", {items = report[target]}) == -1 then
+      print("Failure cannot populate quickfix list")
+      return nil
+    end
   end
-    print("Quickfix list now full")
+  print("Quickfix list now full")
   vim.fn.execute("copen")
   return 1
 end
@@ -189,7 +203,22 @@ api.nvim_create_user_command("EpiCodingStyleOff", function()
   end
 end, {})
 
-api.nvim_create_user_command("EpiCodingStyle", function(_)
+local function verif_param(arg)
+  local allowedParams = {"major", "minor", "info"}
+
+  if arg == "" or arg == nil then
+    return true
+  end
+  for _, param in ipairs(allowedParams) do
+    if arg == param then
+      return true
+    end
+  end
+  return false
+end
+
+
+api.nvim_create_user_command("EpiCodingStyle", function(opts)
   local absoluteExportFilePath = vim.fn.expand("$PWD/"..config.export_file)
   local spawnChecker = {
     "docker", "run", "--rm", "-i",
@@ -200,13 +229,18 @@ api.nvim_create_user_command("EpiCodingStyle", function(_)
 
   remove_export_file(absoluteExportFilePath)
   print("Running Coding Style checker...")
+  if verif_param(opts.args) == false then
+    print("Invalid argument should be one of these 'major', 'minor', 'info' or nothing")
+    return
+  end
+
   local ret = vim.fn.jobstart(spawnChecker, {
     on_exit = function ()
       local report = parse_report_file();
-      if report == nil or populate_quickfix_list(report) == nil then
+      if report == nil or populate_quickfix_list(report, opts.args) == nil then
       	return
       end
-      set_coding_style_extmark()
+      -- set_coding_style_extmark()
     end
   })
 
@@ -214,7 +248,13 @@ api.nvim_create_user_command("EpiCodingStyle", function(_)
     print("Error while trying checking coding style.")
   end
 end,
-{})
+{
+  nargs = "?",
+  complete = function()
+    return {"major", "minor", "info"}
+  end,
+  desc = "automatically recomplie your tests and give you criterions tests inside your buffer",
+})
 
 api.nvim_create_user_command("EpiCodingStyleStatus", function()
   local absoluteExportFilePath = vim.fn.expand("$PWD/"..config.export_file)
