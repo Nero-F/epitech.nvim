@@ -131,8 +131,8 @@ local function parse_line_for_qflist(line)
   return {filename = filename, lnum = lineNbr, text = error, valid = 1}
 end
 
-local function parse_report_file()
-  local filebuffer = vim.fn.readfile(config.export_file)
+local function parse_report_file(path)
+  local filebuffer = vim.fn.readfile(path)
   local report = {
     major = {},
     minor = {},
@@ -219,6 +219,8 @@ end
 
 
 api.nvim_create_user_command("EpiCodingStyle", function(opts)
+  print(config.delivery_dir)
+  print(config.reports_dir)
   local absoluteExportFilePath = vim.fn.expand("$PWD/"..config.export_file)
   local spawnChecker = {
     "docker", "run", "--rm", "-i",
@@ -236,7 +238,8 @@ api.nvim_create_user_command("EpiCodingStyle", function(opts)
 
   local ret = vim.fn.jobstart(spawnChecker, {
     on_exit = function ()
-      local report = parse_report_file();
+      print(absoluteExportFilePath)
+      local report = parse_report_file(absoluteExportFilePath);
       if report == nil or populate_quickfix_list(report, opts.args) == nil then
       	return
       end

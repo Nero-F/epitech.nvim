@@ -11,7 +11,7 @@ local defaultConfig = {
     },
     title = "EpiCodingStyle",
     separator = "━",
-    delivery_dir =  "/home/nero_f/delivery/EPITECH/TEK1/CPE_antman_2022", --vim.fn.expand("$PWD"),
+    delivery_dir =  vim.fn.expand("$PWD"),
     reports_dir = vim.fn.simplify(vim.fn.expand("$PWD")), -- simplify is not really usefull here
     export_file = "coding-style-reports.log",
   },
@@ -43,6 +43,15 @@ local defaultConfig = {
       node= {s= '#!/usr/bin/env node', b= '/*', m= '**', e= '*/'},
     }
   },
+  -- diagnostics = {
+  --   diag_file = "ag.disp",
+  --   run_cmd = {
+  --     "./unit_tests",
+  --     "--verbose=5",
+  --     "--always-succeed", -- nvim has trouble to parse the json when criterion return something other than 0
+  --     "--json="
+  --   },
+  -- },
 }
 
 local configurableModule = {
@@ -62,7 +71,6 @@ local function require_and_configure(moduleName)
   end
   return module
 end
-
 local function merge_table(a, b)
   if type(a) == 'table' and type(b) == 'table' then
     for k, v in pairs(b) do
