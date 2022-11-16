@@ -221,35 +221,35 @@ end
 api.nvim_create_user_command("EpiCodingStyle", function(opts)
   print(config.delivery_dir)
   print(config.reports_dir)
-  -- local absoluteExportFilePath = vim.fn.expand("$PWD/"..config.export_file)
-  -- local spawnChecker = {
-  --   "docker", "run", "--rm", "-i",
-  --   "-v", config.delivery_dir .. ":/mnt/delivery",
-  --   "-v", config.reports_dir .. ":/mnt/reports",
-  --   "ghcr.io/epitech/coding-style-checker:latest", "/mnt/delivery", "/mnt/reports",
-  -- }
-  --
-  -- remove_export_file(absoluteExportFilePath)
-  -- print("Running Coding Style checker...")
-  -- if verif_param(opts.args) == false then
-  --   print("Invalid argument should be one of these 'major', 'minor', 'info' or nothing")
-  --   return
-  -- end
-  --
-  -- local ret = vim.fn.jobstart(spawnChecker, {
-  --   on_exit = function ()
-  --     print(absoluteExportFilePath)
-  --     local report = parse_report_file(absoluteExportFilePath);
-  --     if report == nil or populate_quickfix_list(report, opts.args) == nil then
-  --     	return
-  --     end
-  --     set_coding_style_extmark()
-  --   end
-  -- })
-  --
-  -- if ret == -1 then
-  --   print("Error while trying checking coding style.")
-  -- end
+  local absoluteExportFilePath = vim.fn.expand("$PWD/"..config.export_file)
+  local spawnChecker = {
+    "docker", "run", "--rm", "-i",
+    "-v", config.delivery_dir .. ":/mnt/delivery",
+    "-v", config.reports_dir .. ":/mnt/reports",
+    "ghcr.io/epitech/coding-style-checker:latest", "/mnt/delivery", "/mnt/reports",
+  }
+
+  remove_export_file(absoluteExportFilePath)
+  print("Running Coding Style checker...")
+  if verif_param(opts.args) == false then
+    print("Invalid argument should be one of these 'major', 'minor', 'info' or nothing")
+    return
+  end
+
+  local ret = vim.fn.jobstart(spawnChecker, {
+    on_exit = function ()
+      print(absoluteExportFilePath)
+      local report = parse_report_file(absoluteExportFilePath);
+      if report == nil or populate_quickfix_list(report, opts.args) == nil then
+      	return
+      end
+      set_coding_style_extmark()
+    end
+  })
+
+  if ret == -1 then
+    print("Error while trying checking coding style.")
+  end
 end,
 {
   nargs = "?",
