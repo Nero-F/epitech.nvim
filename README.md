@@ -14,7 +14,7 @@ It offers some pretty fine functionality such as embeded coding style reports, h
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
 
 ```viml 
-use 'Nero-F/epitech.nvim'
+use {'Nero-F/epitech.nvim'}
 ```
 
 Using [vim-plug](https://github.com/junegunn/vim-plug)
@@ -28,6 +28,21 @@ call dein#add('Nero-F/epitech.nvim')
 ```
 
 ## Configurations
+
+for basic setup with all batteries included:
+
+```lua
+require("epitechJA").setup()
+```
+
+If using [packer.nvim](https://github.com/wbthomason/packer.nvim) it can be setup directly in the plugin spec:
+```lua
+use {"Nero-F/epitech", config = function() require("epitech").setup() end}
+```
+
+Configuration can be passed to the setup function. Here is an example with most of the default settings:
+
+
 ```lua
 require("epitech").setup({
   coding_style = {
@@ -45,4 +60,4 @@ This plugin is still under development, I only code it for fun, to practice a li
 
 ### Contributing
 
-All contributions are welcome! Just open a pull request. Please read CONTRIBUTING.md
+All contributions are welcome! Just open a pull request.
