@@ -194,13 +194,20 @@ local function remove_export_file(filename)
   end
 end
 
-api.nvim_create_user_command("EpiCodingStyleOff", function()
+local function clear_namespace()
   local ns = api.nvim_get_namespaces()["EpiCodingStyle.extmark"]
+  if ns == nil then
+  	return
+  end
   local qfl = vim.fn.getqflist()
 
   for _, value in ipairs(qfl) do
     api.nvim_buf_clear_namespace(value.bufnr, ns, 0, -1)
   end
+end
+
+api.nvim_create_user_command("EpiCodingStyleOff", function()
+  clear_namespace()
 end, {})
 
 local function verif_param(arg)
@@ -219,8 +226,9 @@ end
 
 
 api.nvim_create_user_command("EpiCodingStyle", function(opts)
-  print(config.delivery_dir)
-  print(config.reports_dir)
+  print("delivery_dir: ", config.delivery_dir)
+  print("reports_dir: ", config.reports_dir)
+  clear_namespace()
   local absoluteExportFilePath = vim.fn.expand("$PWD/"..config.export_file)
   local spawnChecker = {
     "docker", "run", "--rm", "-i",
@@ -238,7 +246,6 @@ api.nvim_create_user_command("EpiCodingStyle", function(opts)
 
   local ret = vim.fn.jobstart(spawnChecker, {
     on_exit = function ()
-      print(absoluteExportFilePath)
       local report = parse_report_file(absoluteExportFilePath);
       if report == nil or populate_quickfix_list(report, opts.args) == nil then
       	return
