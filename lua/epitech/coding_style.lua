@@ -7,10 +7,6 @@ local sets = {
   'syntax clear',
 }
 
--- local keymaps = {
---   quit = { rhs = '<cmd>lua require"packer.display".quit()<cr>', action = 'quit' },
--- }
---
 EpiCodingStyle.cfg = function(_config)
   config = require("epitech.utils").cfg(_config)
 end
@@ -123,57 +119,12 @@ end
 local function parse_line_for_qflist(line)
   local x, y = string.find(line, "%:%d+%:")
   local lineNbr = vim.fn.str2nr(string.sub(line, x+1, y-1), 10)
-  x, y = string.find(line, "^[a-zA-Z0-9%_%-%.%/]+%:")
+  x, y = string.find(line, "^[a-zA-Z0-9%_%-%.%/% %(%)]+%:")
   local filename = string.sub(line, x, y-1)
   x, y = string.find(line, "%:%u+.+$")
   local error = string.sub(line, x+1, y)
 
   return {filename = filename, lnum = lineNbr, text = error, valid = 1}
-end
-
-local function parse_report_file(path)
-  local filebuffer = vim.fn.readfile(path)
-  local report = {
-    major = {},
-    minor = {},
-    info = {},
-  }
-
-  if filebuffer == nil then
-    print("Cannot read of file " .. config.export_file)
-    return nil
-  end
-
-  for _, line in pairs(filebuffer) do
-    local x, y = string.find(line, "%:%s%u+%:")
-    local target = string.lower(string.sub(line, x+2, y-1))
-    table.insert(report[target], parse_line_for_qflist(line))
-  end
-  return report
-end
-
-local function populate_quickfix_list(report, target)
-  vim.fn.setqflist({}, "r")
-  if target == "" then
-    for key, value in pairs(report) do
-      if vim.fn.setqflist({}, "a", {items = value}) == -1 then
-	print("Failure cannot populate quickfix list")
-	return nil
-      end
-    end
-  else
-    if #report[target] == 0 then
-      print(string.format("%s target is empty...", target))
-      return nil
-    end
-    if vim.fn.setqflist({}, "r", {items = report[target]}) == -1 then
-      print("Failure cannot populate quickfix list")
-      return nil
-    end
-  end
-  print("Quickfix list now full")
-  vim.fn.execute("copen")
-  return 1
 end
 
 local function set_coding_style_extmark()
@@ -224,11 +175,72 @@ local function verif_param(arg)
   return false
 end
 
+local f = require("epitech.loader")
+
+local thread = coroutine.create(function(state)
+  local i = 1
+
+  while true do
+    api.nvim_buf_set_lines(f.bufid, 0, 1, true, { f.spinner[i % #f.spinner + 1] .. f.checker_txt})
+    i = i + 1
+    coroutine.yield()
+    if state ~= nil and state == "stop" then
+      break
+    end
+  end
+end)
+
+local function parse_report_file(path)
+  local filebuffer = vim.fn.readfile(path)
+  local report = {
+    major = {},
+    minor = {},
+    info = {},
+  }
+
+  if filebuffer == nil then
+    print("Cannot read of file " .. config.export_file)
+    return nil
+  end
+
+  for i, line in pairs(filebuffer) do
+    local x, b = string.find(line, "%:%s%u+%:")
+    local target = string.lower(string.sub(line, x+2, b-1))
+    table.insert(report[target], parse_line_for_qflist(line))
+  end
+  return report
+end
+
+local function populate_quickfix_list(report, target)
+  f:updateTxt(" populate quickfix list", thread)
+  vim.fn.setqflist({}, "r")
+
+  if target == "" then
+    for key, value in pairs(report) do
+      if vim.fn.setqflist({}, "a", {items = value}) == -1 then
+	print("Failure cannot populate quickfix list")
+	return nil
+      end
+    end
+  else
+    if #report[target] == 0 then
+      print(string.format("%s target is empty...", target))
+      return nil
+    end
+    if vim.fn.setqflist({}, "r", {items = report[target]}) == -1 then
+      print("Failure cannot populate quickfix list")
+      return nil
+    end
+  end
+  print("Quickfix list now full")
+  vim.fn.execute("copen")
+  return 1
+end
+
+
 
 api.nvim_create_user_command("EpiCodingStyle", function(opts)
-  print("delivery_dir: ", config.delivery_dir)
-  print("reports_dir: ", config.reports_dir)
-  clear_namespace()
+  f:init()
   local absoluteExportFilePath = vim.fn.expand("$PWD/"..config.export_file)
   local spawnChecker = {
     "docker", "run", "--rm", "-i",
@@ -236,25 +248,32 @@ api.nvim_create_user_command("EpiCodingStyle", function(opts)
     "-v", config.reports_dir .. ":/mnt/reports",
     "ghcr.io/epitech/coding-style-checker:latest", "/mnt/delivery", "/mnt/reports",
   }
-
   remove_export_file(absoluteExportFilePath)
-  print("Running Coding Style checker...")
+  clear_namespace()
+
+  -- print("Running Coding Style checker...")
   if verif_param(opts.args) == false then
     print("Invalid argument should be one of these 'major', 'minor', 'info' or nothing")
     return
   end
 
-  local ret = vim.fn.jobstart(spawnChecker, {
-    on_exit = function ()
+  f:disp_waiter(thread)
+
+  local job_handle = vim.fn.jobstart(spawnChecker, { 
+    on_exit = function()
+      f:updateTxt(" CS Process", thread)
       local report = parse_report_file(absoluteExportFilePath);
+
       if report == nil or populate_quickfix_list(report, opts.args) == nil then
-      	return
+	goto end_func
       end
       set_coding_style_extmark()
+      ::end_func::
+      f.active = false
     end
   })
 
-  if ret == -1 then
+  if job_handle == -1 then
     print("Error while trying checking coding style.")
   end
 end,
