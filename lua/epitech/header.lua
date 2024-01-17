@@ -2,102 +2,102 @@ local EpiHeader = {}
 local config = nil
 
 EpiHeader.cfg = function(_config)
-  config = require("epitech.utils").cfg(_config)
+    config = require("epitech.utils").cfg(_config)
 end
 
-local getAcademicYear = function ()
-  return 2022
+local getAcademicYear = function()
+    return 2024
 end
 
 local function append_preproc_directives(ft)
-  local rhs_ext = ft == "hpp" and "_HPP_" or "_H_"
-  local filename = string.upper(vim.fn.expand("%:t:r") .. rhs_ext)
+    local rhs_ext = ft == "hpp" and "_HPP_" or "_H_"
+    local filename = string.upper(vim.fn.expand("%:t:r") .. rhs_ext)
 
-  local cppDirectives = { 
-    define = {
-      "#ifndef " .. filename,
-      "#define " .. filename,
-      "",
-      "#endif /* " .. filename .. " */",
-    },
-    pragma = {
-      "#pragma once"
+    local cppDirectives = {
+        define = {
+            "#ifndef " .. filename,
+            "#define " .. filename,
+            "",
+            "#endif /* " .. filename .. " */",
+        },
+        pragma = {
+            "#pragma once"
+        }
     }
-  }
-  if ft == "h" then
-    vim.fn.append(vim.fn.line('.'), cppDirectives.define)
-  else
-    vim.ui.select({"define", "pragma"}, { }, function(choice)
-      vim.fn.append(vim.fn.line('.'), cppDirectives[choice])
-    end)
-  end
+    if ft == "h" then
+        vim.fn.append(vim.fn.line('.'), cppDirectives.define)
+    else
+        vim.ui.select({ "define", "pragma" }, {}, function(choice)
+            vim.fn.append(vim.fn.line('.'), cppDirectives[choice])
+        end)
+    end
 end
 
 local putHeader = function(targetedHeader, fileDesc, projName)
-  local header = {
-    targetedHeader.b,
-    targetedHeader.m .. " EPITECH PROJECT, " .. getAcademicYear(), -- TODO: this need to done 
-    targetedHeader.m .. projName,
-    targetedHeader.m .. " File description:" ,
-    targetedHeader.m .. " " .. fileDesc,
-    targetedHeader.e,
-  }
+    local header = {
+        targetedHeader.b,
+        targetedHeader.m .. " EPITECH PROJECT, " .. getAcademicYear(), -- TODO: this need to done
+        targetedHeader.m .. projName,
+        targetedHeader.m .. " File description:",
+        targetedHeader.m .. " " .. fileDesc,
+        targetedHeader.e,
+    }
 
-  vim.fn.append(0, header)
+    vim.fn.append(0, header)
 end
 
 local function get_project_name()
-  local cwd = vim.fn.getcwd()
-  local i, j = string.find(cwd, "/[a-zA-Z0-9 .]+$")
+    local cwd = vim.fn.getcwd()
+    local i, j = string.find(cwd, "/[a-zA-Z0-9 .]+$")
 
-  if i == nil then
-    print("Could nor determine the name of the project..")
-    return nil
-  end
-  return ' ' .. string.sub(cwd, i+1, j)
+    if i == nil then
+        print("Could nor determine the name of the project..")
+        return nil
+    end
+    return ' ' .. string.sub(cwd, i + 1, j)
 end
 
 local function ask_user_input_and_put_header(targetedHeader, ft)
-  local projNameTmp = get_project_name()
-  local defaultString = ""
+    local projNameTmp = get_project_name()
+    local defaultString = ""
 
-  if projNameTmp then
-    defaultString = " (default: ".. projNameTmp .. ")  "
-  end
-
-  vim.ui.input("PROJECT NAME?" .. defaultString, function(projName)
-    if projName == nil then
-      projName = projNameTmp
-    else
-      projName = ' ' .. projName
+    if projNameTmp then
+        defaultString = " (default: " .. projNameTmp .. ")"
     end
-    local fileDescTmp = vim.fn.expand("%:t:r")
-    defaultString = " (default:".. fileDescTmp .. ")"
 
-    vim.ui.input("Description" .. defaultString, function(fileDesc)
-      if fileDesc == nil then
-        fileDesc = fileDescTmp
-      end
-      putHeader(targetedHeader, fileDesc, projName)
-      if ft == 'h' or ft == "hpp" then
-        append_preproc_directives(ft)
-      end
+    vim.ui.input({ prompt = "PROJECT NAME?" .. defaultString }, function(projName)
+        if projName == nil or projName == "" then
+            projName = projNameTmp
+        else
+            projName = ' ' .. projName
+        end
+        local fileDescTmp = vim.fn.expand("%:t:r")
+        defaultString = " (default: " .. fileDescTmp .. ")"
+
+        vim.ui.input({ prompt = "Description: " .. defaultString }, function(fileDesc)
+            if fileDesc == nil or fileDesc == "" then
+                fileDesc = fileDescTmp
+            end
+            putHeader(targetedHeader, fileDesc, projName)
+            if ft == 'h' or ft == "hpp" then
+                append_preproc_directives(ft)
+            end
+        end)
     end)
-  end)
 end
 
-vim.keymap.set('n', '<leader>h', ':EpiHeader<cr>', { noremap=true, silent=false })
+vim.keymap.set('n', '<leader>h', ':EpiHeader<cr>', { noremap = true, silent = false })
 
 vim.api.nvim_create_user_command("EpiHeader", function(_)
-  local ft = vim.fn.expand("%:e")
-  local targetedHeader = config.headermap[ft]
+    local ft = vim.bo.filetype
+    local targetedHeader = config.headermap[ft]
 
-  if targetedHeader == nil then
-    print("Filetype not supported...")
-    return nil
-  end
+    if targetedHeader == nil then
+        print("Filetype not supported...")
+        return nil
+    end
 
-  ask_user_input_and_put_header(targetedHeader, ft) -- In this order cuz input are non-blocking
+    ask_user_input_and_put_header(targetedHeader, ft) -- In this order cuz input are non-blocking
 end, { nargs = 0 })
 
 -- WIP
