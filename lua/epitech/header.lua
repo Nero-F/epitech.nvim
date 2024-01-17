@@ -62,20 +62,24 @@ local function ask_user_input_and_put_header(targetedHeader, ft)
     local defaultString = ""
 
     if projNameTmp then
-        defaultString = " (default: " .. projNameTmp .. ")"
+        defaultString = " (default: " .. projNameTmp .. ") => "
     end
 
     vim.ui.input({ prompt = "PROJECT NAME?" .. defaultString }, function(projName)
-        if projName == nil or projName == "" then
+        if projName == nil then
+            return
+        elseif projName == "" then
             projName = projNameTmp
         else
             projName = ' ' .. projName
         end
         local fileDescTmp = vim.fn.expand("%:t:r")
-        defaultString = " (default: " .. fileDescTmp .. ")"
+        defaultString = " (default: " .. fileDescTmp .. ") => "
 
         vim.ui.input({ prompt = "Description: " .. defaultString }, function(fileDesc)
-            if fileDesc == nil or fileDesc == "" then
+            if fileDesc == nil then
+                return
+            elseif fileDesc == "" then
                 fileDesc = fileDescTmp
             end
             putHeader(targetedHeader, fileDesc, projName)
