@@ -6,7 +6,7 @@ EpiHeader.cfg = function(_config)
 end
 
 local getAcademicYear = function ()
-  return 2022
+  return os.date("%Y")
 end
 
 local function append_preproc_directives(ft)
@@ -85,8 +85,6 @@ local function ask_user_input_and_put_header(targetedHeader, ft)
     end)
   end)
 end
-
-vim.keymap.set('n', '<leader>h', ':EpiHeader<cr>', { noremap=true, silent=false })
 
 vim.api.nvim_create_user_command("EpiHeader", function(_)
   local ft = vim.fn.expand("%:e")
