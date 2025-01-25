@@ -48,10 +48,10 @@ end
 
 local function get_project_name()
   local cwd = vim.fn.getcwd()
-  local i, j = string.find(cwd, "/[a-zA-Z0-9 .]+$")
+  local i, j = string.find(cwd, "/[%w%-%._]+$")
 
   if i == nil then
-    print("Could nor determine the name of the project..")
+    print("Could not determine the name of the project..")
     return nil
   end
   return ' ' .. string.sub(cwd, i+1, j)
