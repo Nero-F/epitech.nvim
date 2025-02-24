@@ -29,7 +29,7 @@ local defaultConfig = {
       css = {b = '/*', m = '**', e = '*/'},
       pov = {b = '//', m = '//', e = '//'},
       pascal = {b = '{ ', m = '   ', e = '}'},
-      haskell = {b = '{-', m = '-- ', e = '-}'},
+      hs = {b = '{-', m = '--', e = '-}'},
       vim = {b = '""', m = '"" ', e = '""'},
     },
     com_map_shebang = {
