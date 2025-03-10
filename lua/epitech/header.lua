@@ -88,14 +88,19 @@ end
 
 vim.api.nvim_create_user_command("EpiHeader", function(_)
   local ft = vim.fn.expand("%:e")
+  local filename = vim.fn.expand("%:t"):lower()
   local targetedHeader = config.headermap[ft]
+
+  if targetedHeader == nil and (filename == "makefile" or filename:match("^makefile%.")) then
+    targetedHeader = config.headermap["make"]
+  end
 
   if targetedHeader == nil then
     print("Filetype not supported...")
     return nil
   end
 
-  ask_user_input_and_put_header(targetedHeader, ft) -- In this order cuz input are non-blocking
+  ask_user_input_and_put_header(targetedHeader, ft)
 end, { nargs = 0 })
 
 -- WIP
