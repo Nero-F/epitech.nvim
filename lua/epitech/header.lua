@@ -6,7 +6,7 @@ EpiHeader.cfg = function(_config)
 end
 
 local getAcademicYear = function ()
-  return 2022
+  return os.date("%Y")
 end
 
 local function append_preproc_directives(ft)
@@ -48,10 +48,10 @@ end
 
 local function get_project_name()
   local cwd = vim.fn.getcwd()
-  local i, j = string.find(cwd, "/[a-zA-Z0-9 .]+$")
+  local i, j = string.find(cwd, "/[%w%-%._]+$")
 
   if i == nil then
-    print("Could nor determine the name of the project..")
+    print("Could not determine the name of the project..")
     return nil
   end
   return ' ' .. string.sub(cwd, i+1, j)
@@ -66,16 +66,16 @@ local function ask_user_input_and_put_header(targetedHeader, ft)
   end
 
   vim.ui.input("PROJECT NAME?" .. defaultString, function(projName)
-    if projName == nil then
+    if projName == "" or projName == nil then
       projName = projNameTmp
     else
       projName = ' ' .. projName
     end
-    local fileDescTmp = vim.fn.expand("%:t:r")
+    local fileDescTmp = vim.fn.expand("%:t")
     defaultString = " (default:".. fileDescTmp .. ")"
 
     vim.ui.input("Description" .. defaultString, function(fileDesc)
-      if fileDesc == nil then
+      if fileDesc == "" or fileDesc == nil then
         fileDesc = fileDescTmp
       end
       putHeader(targetedHeader, fileDesc, projName)
@@ -86,18 +86,21 @@ local function ask_user_input_and_put_header(targetedHeader, ft)
   end)
 end
 
-vim.keymap.set('n', '<leader>h', ':EpiHeader<cr>', { noremap=true, silent=false })
-
 vim.api.nvim_create_user_command("EpiHeader", function(_)
   local ft = vim.fn.expand("%:e")
+  local filename = vim.fn.expand("%:t"):lower()
   local targetedHeader = config.headermap[ft]
+
+  if targetedHeader == nil and (filename == "makefile" or filename:match("^makefile%.")) then
+    targetedHeader = config.headermap["make"]
+  end
 
   if targetedHeader == nil then
     print("Filetype not supported...")
     return nil
   end
 
-  ask_user_input_and_put_header(targetedHeader, ft) -- In this order cuz input are non-blocking
+  ask_user_input_and_put_header(targetedHeader, ft)
 end, { nargs = 0 })
 
 -- WIP
